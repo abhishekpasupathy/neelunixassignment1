@@ -166,7 +166,7 @@ for i in "${!SOURCES[@]}"; do
     RESERVED[$target]=$i
     # Existing paths are always treated as collisions. This deliberately avoids
     # order-dependent swaps and guarantees that a later mv cannot overwrite data.
-    if [[ -e "$target" && "$target" != "$source" ]]; then
+    if [[ ( -e "$target" || -L "$target" ) && "$target" != "$source" ]]; then
       status="COLLISION (destination exists)"
     fi
   fi
@@ -200,7 +200,7 @@ for i in "${!SOURCES[@]}"; do
   target_dir=$(dirname -- "$target")
   mkdir -p -- "$target_dir" || { printf 'FAILED\t%s\n' "$source" >&2; ERRORS=$((ERRORS + 1)); continue; }
   # Re-check immediately before mv to avoid clobbering a file created after preview.
-  if [[ -e "$target" ]]; then
+  if [[ -e "$target" || -L "$target" ]]; then
     printf 'COLLISION\t%s\n' "$target" >&2
     ERRORS=$((ERRORS + 1))
     continue
