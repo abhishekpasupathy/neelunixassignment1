@@ -18,7 +18,7 @@ A safe, preview-first Unix assignment implemented in **Bash**. It renames files 
 
 ## Requirements
 
-- Linux, macOS, or another Unix-like environment
+- Linux, macOS, or another Unix-like environment (macOS requires Bash 4+ installed separately; its bundled Bash 3.2 is unsupported)
 - Bash 4.0 or newer
 - Standard utilities: `basename`, `dirname`, `date`, `tr`, `mkdir`, and `mv`
 
@@ -73,8 +73,10 @@ The extension token is empty for files without an extension. A template such as 
 ### Organization modes
 
 - `none`: keep files in their current directory.
-- `extension`: place files in a folder named after their extension. Files without an extension go into `no_extension/`.
+- `extension`: place files in a folder named after their lowercased, sanitized extension (for example, `a*b` becomes `a_b/`). Files without an extension go into `no_extension/`.
 - `date`: place files in a `YYYY-MM/` folder based on their last modification date. If the date cannot be read, use `unknown-date/`.
+
+By default, `*` excludes hidden dotfiles; explicitly specify a dot-prefixed glob to select them. Patterns containing spaces are supported without splitting into separate patterns.
 
 The organizer scans only the selected directory's top level; it does not recursively traverse subdirectories. This avoids accidentally processing files already placed into destination folders.
 
@@ -153,11 +155,11 @@ chmod +x file_manager.sh test_file_manager.sh
 ./test_file_manager.sh
 ```
 
-The tests use a temporary directory and verify preview safety, actual renaming, extension organization, collision handling, and log creation. Test files are removed automatically when the test finishes.
+The tests use temporary directories and verify preview safety, actual renaming, extension and date organization, existing and duplicate-target collision handling, invalid-character sanitization, space-containing globs, hidden-file exclusion, and log creation. Test files are removed automatically when the test finishes.
 
 ## How the Bash concepts are used
 
-- **Globbing:** `"$ROOT"/$MATCH` expands the configured file pattern.
+- **Globbing:** `"$ROOT"/$MATCH` expands the configured file pattern with `IFS` temporarily empty to prevent word splitting.
 - **Parameter expansion:** `${base%.*}`, `${base##*.}`, and template substitutions split names and construct new names.
 - **basename / dirname:** separate the filename from its parent directory.
 - **case:** validates the organization mode and selects the correct destination folder.
@@ -180,5 +182,6 @@ This Bash program automates bulk file renaming and organization. It accepts a di
 
 - Top-level files only; recursive traversal is intentionally not enabled.
 - Date organization uses modification date, not EXIF or creation metadata.
-- The script uses Bash 4+ features (associative arrays and lowercase parameter expansion).
+- The script requires Bash 4+ (associative arrays and lowercase parameter expansion); the bundled macOS Bash 3.2 is rejected with an explanatory error.
+- `date -r FILE` behaves differently on macOS (BSD `date`) than on Linux (GNU `date`), so modification-date organization may need platform-specific adjustment.
 - It does not overwrite existing files or attempt complex multi-file swap operations.
