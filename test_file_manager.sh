@@ -57,5 +57,34 @@ DATE_FOLDER=$(date -r "$TMP/date/dated.txt" '+%Y-%m' 2>/dev/null || date '+%Y-%m
 check "date organizer creates a YYYY-MM folder" test -d "$TMP/date/$DATE_FOLDER"
 check "date organizer moves file into its month folder" test -f "$TMP/date/$DATE_FOLDER/dated.txt"
 
+# A glob containing a literal space must not be split into multiple patterns.
+mkdir -p "$TMP/spaces"
+printf 'match' > "$TMP/spaces/my report.txt"
+printf 'ignore' > "$TMP/spaces/other.txt"
+"$TOOL" --dir "$TMP/spaces" --match 'my *.txt' --rename-pattern 'found_{name}.{ext}' --apply > "$TMP/spaces-output.txt"
+check "glob with a space matches the intended file" test -f "$TMP/spaces/found_my report.txt"
+check "glob with a space leaves other files untouched" test -f "$TMP/spaces/other.txt"
+
+# Default * must not match hidden files.
+mkdir -p "$TMP/dotfiles"
+printf 'hidden' > "$TMP/dotfiles/.gitignore"
+printf 'visible' > "$TMP/dotfiles/visible.txt"
+"$TOOL" --dir "$TMP/dotfiles" --organize extension --apply > "$TMP/dotfiles-output.txt"
+check "default glob leaves dotfiles untouched" test -f "$TMP/dotfiles/.gitignore"
+
+# Extension folders must sanitize special characters.
+mkdir -p "$TMP/special-extension"
+printf 'data' > "$TMP/special-extension/weird.a*b"
+"$TOOL" --dir "$TMP/special-extension" --organize extension --apply > "$TMP/special-extension-output.txt"
+check "special-character extension gets sanitized folder" test -f "$TMP/special-extension/a_b/weird.a_b"
+
+# Two source files mapping to one destination must report a collision.
+mkdir -p "$TMP/duplicate"
+printf 'first' > "$TMP/duplicate/one.txt"
+printf 'second' > "$TMP/duplicate/two.txt"
+"$TOOL" --dir "$TMP/duplicate" --match '*.txt' --rename-pattern 'shared.{ext}' > "$TMP/duplicate-output.txt"
+check "duplicate planned target reports COLLISION" grep -q 'COLLISION (duplicate target)' "$TMP/duplicate-output.txt"
+check "duplicate-target preview leaves both sources untouched" test -f "$TMP/duplicate/two.txt"
+
 printf '\nTests: %d passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))
