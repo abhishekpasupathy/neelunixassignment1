@@ -149,7 +149,7 @@ For date organization, use `--organize date` instead.
 Run the included tests:
 
 ```bash
-chmod +x test_file_manager.sh
+chmod +x file_manager.sh test_file_manager.sh
 ./test_file_manager.sh
 ```
 
