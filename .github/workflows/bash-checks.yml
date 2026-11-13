@@ -1,0 +1,23 @@
+name: Bash checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate Bash syntax
+        run: |
+          bash -n file_manager.sh
+          bash -n demo.sh
+          bash -n test_file_manager.sh
+      - name: Run functional tests
+        run: |
+          chmod +x file_manager.sh demo.sh test_file_manager.sh
+          ./test_file_manager.sh
