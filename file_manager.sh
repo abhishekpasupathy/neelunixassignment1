@@ -3,7 +3,11 @@
 # Preview-first Bash utility. No external dependencies beyond common Unix tools.
 
 set -uo pipefail
-shopt -s nullglob dotglob
+if (( BASH_VERSINFO[0] < 4 )); then
+  printf 'Error: Bash 4.0 or newer is required (found Bash %s).\n' "$BASH_VERSION" >&2
+  exit 1
+fi
+shopt -s nullglob
 
 VERSION="1.0.0"
 ROOT="."
@@ -74,7 +78,10 @@ while (($#)); do
 done
 
 [[ -d "$ROOT" ]] || die "Directory does not exist: $ROOT"
-[[ "$ORGANIZE" == "none" || "$ORGANIZE" == "extension" || "$ORGANIZE" == "date" ]] || die "Organize mode must be none, extension, or date"
+case "$ORGANIZE" in
+  none|extension|date) ;;
+  *) die "Organize mode must be none, extension, or date" ;;
+esac
 [[ "$COUNTER_START" =~ ^[0-9]+$ && "$COUNTER_WIDTH" =~ ^[0-9]+$ ]] || die "Counter values must be non-negative integers"
 (( COUNTER_WIDTH <= 12 )) || die "Counter width must be 12 or less"
 ROOT=$(cd "$ROOT" && pwd -P)
@@ -109,7 +116,8 @@ declare -a SOURCES=() TARGETS=() STATUSES=()
 declare -A RESERVED=()
 COUNTER=$COUNTER_START
 
-# Top-level files only. Quoted glob expansion preserves spaces and special characters.
+# Top-level files only. Empty IFS disables word splitting while retaining globbing.
+IFS=
 for source in "$ROOT"/$MATCH; do
   [[ -f "$source" ]] || continue
   [[ "$source" == "$LOG_FILE" ]] && continue
@@ -132,8 +140,11 @@ for source in "$ROOT"/$MATCH; do
 
   case "$ORGANIZE" in
     extension)
-      folder=${ext,,}
-      [[ -n "$folder" ]] || folder="no_extension"
+      if [[ -z "$ext" ]]; then
+        folder="no_extension"
+      else
+        folder=$(sanitize_name "${ext,,}")
+      fi
       destination_dir="$ROOT/$folder"
       ;;
     date)
@@ -147,6 +158,7 @@ for source in "$ROOT"/$MATCH; do
   TARGETS+=("$target")
   STATUSES+=("READY")
 done
+unset IFS
 
 if (("${#SOURCES[@]}" == 0)); then
   printf 'No files matched pattern: %s\n' "$MATCH"
