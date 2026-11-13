@@ -164,13 +164,10 @@ for i in "${!SOURCES[@]}"; do
     status="COLLISION (duplicate target)"
   else
     RESERVED[$target]=$i
-    # A target may already exist only when it is itself moving away in this batch.
+    # Existing paths are always treated as collisions. This deliberately avoids
+    # order-dependent swaps and guarantees that a later mv cannot overwrite data.
     if [[ -e "$target" && "$target" != "$source" ]]; then
-      moving_source=0
-      for candidate in "${SOURCES[@]}"; do
-        [[ "$candidate" == "$target" ]] && moving_source=1
-      done
-      (( moving_source == 1 )) || status="COLLISION (destination exists)"
+      status="COLLISION (destination exists)"
     fi
   fi
   STATUSES[$i]=$status
