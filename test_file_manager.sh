@@ -43,5 +43,19 @@ check "collision is detected" grep -q 'COLLISION' "$TMP/collision.txt"
 check "existing destination remains unchanged" grep -q 'keep' "$TMP/collision/target.txt"
 check "collision source remains unchanged" test -f "$TMP/collision/source.txt"
 
+# Invalid-character sanitization (colon is valid on Linux but not on common target filesystems).
+mkdir -p "$TMP/invalid"
+printf 'safe data' > "$TMP/invalid/bad:name.txt"
+"$TOOL" --dir "$TMP/invalid" --match '*.txt' --apply > "$TMP/invalid-output.txt"
+check "invalid filename characters are replaced" test -f "$TMP/invalid/bad_name.txt"
+
+# Date organization uses the file modification month.
+mkdir -p "$TMP/date"
+printf 'dated data' > "$TMP/date/dated.txt"
+DATE_FOLDER=$(date -r "$TMP/date/dated.txt" '+%Y-%m' 2>/dev/null || date '+%Y-%m')
+"$TOOL" --dir "$TMP/date" --organize date --apply > "$TMP/date-output.txt"
+check "date organizer creates a YYYY-MM folder" test -d "$TMP/date/$DATE_FOLDER"
+check "date organizer moves file into its month folder" test -f "$TMP/date/$DATE_FOLDER/dated.txt"
+
 printf '\nTests: %d passed, %d failed\n' "$PASS" "$FAIL"
 (( FAIL == 0 ))
